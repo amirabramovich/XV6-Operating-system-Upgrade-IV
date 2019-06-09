@@ -308,26 +308,26 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
 	  struct inode *mynode = get_inode(nid);
     memmove(buf, "Device: ",8);
     int len= itoa(mynode->dev, buf+8);
-    memmove(buf+8+len, "\nInode number: ",15);
+    memmove(buf+8+len, "\nInode_number: ",15);
     len += itoa(mynode->inum, buf+23+len);
-    memmove(buf+23+len, "\nis valid: ",11);
+    memmove(buf+23+len, "\nis_valid: ",11);
     len += itoa(mynode->valid, buf+34+len);
     memmove(buf+34+len, "\ntype: ",7);
     len += itoa(mynode->type, buf+41+len);
-    memmove(buf+41+len, "\nmajor minor: ",14);
-    len += itoa(mynode->major, buf+55+len);
-    memmove(buf+55+len, " ",1);
-    len += itoa(mynode->minor, buf+56+len);
-    memmove(buf+56+len, "\nhard links: ",13);
-    len += itoa(mynode->ref, buf+69+len);
-    memmove(buf+69+len, "\nblocks used: ",14);
+    memmove(buf+41+len, "\nmajor_minor: (",15);
+    len += itoa(mynode->major, buf+56+len);
+    memmove(buf+56+len, ",",1);
+    len += itoa(mynode->minor, buf+57+len);
+    memmove(buf+57+len, ")\nhard_links: ",14);
+    len += itoa(mynode->ref, buf+71+len);
+    memmove(buf+71+len, "\nblocks_used: ",14);
     if(mynode->type==T_DEV)
-      len += itoa(0, buf+83+len);
+      len += itoa(0, buf+85+len);
     else
-      len += itoa(mynode->size, buf+83+len);
-    memmove(buf+83+len, "\n",1);
-    if (off < len+84) {
-      int size = len+84 - off;
+      len += itoa(mynode->size, buf+85+len);
+    memmove(buf+85+len, "\n",1);
+    if (off < len+86) {
+      int size = len+86 - off;
       size = size < n ? size : n;
       memmove(dst, (char *)((uint)buf+(uint)off), size);
       return size;
