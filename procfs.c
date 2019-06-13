@@ -56,7 +56,7 @@ procfsiread(struct inode* dp, struct inode *ip) {
 	ip->valid = 1;
 	ip->type = T_DEV;
 	ip->major = PROCFS;
-	if (ip->inum % 1000==0)
+	if (ip->inum >= 1000)
 		ip->minor = T_DIR;
 	else
 		ip->minor = T_FILE;
@@ -68,7 +68,7 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
 	struct dirent de;
   char buf[1024]={0};
 
-   //cprintf("ip is %d\n",ip->inum);
+  //cprintf("ip is %d\n",ip->inum);
 
 	if (ip == namei("proc")){
     char *pnames[PNFUNCS] = { ".", "..", "ideinfo", "filestat","inodeinfo"};
@@ -76,11 +76,15 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
 		int index=PNFUNCS;
 
     de.inum = ip->inum;
-    memmove(de.name, ".", 2);
+    memmove(de.name, pnames[0], pnames_lengths[0]+1);
     memmove(buf, (char*)&de, sizeof(de));
 
-    for(int i=1;i<PNFUNCS-1;i++){
-      de.inum=i;
+    de.inum = ROOTINO;
+    memmove(de.name, pnames[1], pnames_lengths[1]+1);
+    memmove(buf+ sizeof(de), (char*)&de, sizeof(de));
+
+    for(int i=2;i<PNFUNCS-1;i++){
+      de.inum=i+996;
       memmove(de.name, pnames[i], pnames_lengths[i]+1);
       memmove(buf + i*sizeof(de), (char*)&de, sizeof(de));
     }
@@ -92,15 +96,14 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
 		acquire(&ptable.lock);
 		for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 			if(p->state != UNUSED && p->state != ZOMBIE){
-        char stringNum[4];
-				int stringNumLength = itoa(p->pid, stringNum);
-				de.inum = (p->pid+1) * 1000;
-				memmove(de.name, stringNum, stringNumLength+1);
+        char numb[4];
+				int numb_len = itoa(p->pid, numb);
+				de.inum = p->pid+1000;
+				memmove(de.name, numb, numb_len+1);
         memmove(buf + index * sizeof(de), (char*)&de, sizeof(de));
         index++;
 			}
 		}
-    ip->size = index * sizeof(de);
 		release(&ptable.lock);
     if (off < index * sizeof(de)) {
       int size = index * sizeof(de) - off;
@@ -108,7 +111,7 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
       memmove(dst, buf + off, size);
       return size;
     }
-  }else if(ip->inum == 2){
+  }else if(ip->inum == 998){
       memset(buf,0,1024);
       int array[3];
       int devices[64];
@@ -160,7 +163,7 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
         memmove(dst, (char *)((uint)buf+(uint)off), size);
         return size;
       }
-    }else if(ip->inum == 3){
+    }else if(ip->inum == 999){
     memset(buf,0,1024);
     int array[6];
     char str[4];
@@ -237,7 +240,7 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
       return size;
     }
 
-  }else if(ip->inum % 1000 == 0){
+  }else if(ip->inum > 1000){
     char *namelist[NFUNCS] = { ".", "..", "name", "status"};
     ushort namelist_lengths[NFUNCS] = {1,2,4,6};
     struct dirent pids[NFUNCS];
@@ -245,19 +248,19 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
     pids[1].inum=namei("proc")->inum;
 		for(int i=0 ;i<NFUNCS;i++){
       if(i>1)
-			  pids[i].inum=ip->inum + (i+1)*100;
+			  pids[i].inum=(ip->inum%1000) + (i+1)*100;
 			memmove(pids[i].name,namelist[i],namelist_lengths[i]+1);
 		}
-    ip->size = NFUNCS * sizeof(de);
+    //ip->size = NFUNCS * sizeof(de);
     if (off < NFUNCS * sizeof(de)) {
       int size = NFUNCS * sizeof(de) - off;
       size = size < n ? size : n;
       memmove(dst, (char *)((uint)pids+(uint)off), size);
       return size;
     }
-	}else if(ip->inum % 100 == 0){
-    int pid = (ip->inum-1000) / 1000;
-	  int type = ip->inum % 1000;
+	}else if(ip->inum < INODEINF){
+    int pid = ip->inum % 100;
+	  int type = ip->inum - pid;
     struct proc *myproc = 0;
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -340,8 +343,8 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
 int
 procfswrite(struct inode *ip, char *buf, int n)
 {
-  panic("read-only filesystem");
-  return 0;
+  //read-only filesystem
+  return -1;
 }
 
 void
